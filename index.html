@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google 検索プロキシ</title>
+    <title>Google検索結果</title>
 </head>
 <body>
-    <h1>Google 検索結果</h1>
+    <h1>Google検索結果</h1>
 
     <label for="search-query">検索ワード:</label>
     <input type="text" id="search-query" placeholder="検索するワードを入力">
@@ -27,50 +27,52 @@
             const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
             // プロキシサーバー経由でリクエストを送信
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(googleSearchUrl)}`;
+            const proxyUrl = `https://cors-anywhere.herokuapp.com/${googleSearchUrl}`;
 
             try {
-                const response = await fetch(proxyUrl);
-                const data = await response.json();
+                const response = await fetch(proxyUrl, {
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest", // CORSヘッダ
+                    },
+                });
 
-                if (data && data.contents) {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(data.contents, 'text/html');
+                const data = await response.text();
 
-                    // 検索結果を取得（リンク部分を抽出）
-                    const searchResults = [];
-                    const results = doc.querySelectorAll('h3');
+                // HTMLを解析
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data, 'text/html');
 
-                    results.forEach(result => {
-                        const title = result.innerText;
-                        const link = result.parentElement.href;
+                // 検索結果を取得（リンク部分を抽出）
+                const searchResults = [];
+                const results = doc.querySelectorAll('h3');
 
-                        if (link) {
-                            searchResults.push({ title, url: link });
-                        }
-                    });
+                results.forEach(result => {
+                    const title = result.innerText;
+                    const link = result.parentElement.href;
 
-                    // 結果を表示
-                    const resultDiv = document.getElementById('result');
-                    resultDiv.innerHTML = ''; // 以前の結果をクリア
-
-                    if (searchResults.length === 0) {
-                        resultDiv.innerHTML = '<p>検索結果がありませんでした。</p>';
-                        return;
+                    if (link) {
+                        searchResults.push({ title, url: link });
                     }
+                });
 
-                    // 検索結果をリストとして表示
-                    const resultList = searchResults.map(item => `
-                        <div>
-                            <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
-                        </div>
-                    `).join('');
+                // 結果を表示
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerHTML = ''; // 以前の結果をクリア
 
-                    resultDiv.innerHTML = resultList;
-
-                } else {
-                    alert('エラーが発生しました');
+                if (searchResults.length === 0) {
+                    resultDiv.innerHTML = '<p>検索結果がありませんでした。</p>';
+                    return;
                 }
+
+                // 検索結果をリストとして表示
+                const resultList = searchResults.map(item => `
+                    <div>
+                        <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
+                    </div>
+                `).join('');
+
+                resultDiv.innerHTML = resultList;
+
             } catch (error) {
                 console.error('Error:', error);
                 alert('検索結果を取得できませんでした');
@@ -79,4 +81,5 @@
     </script>
 </body>
 </html>
+
 
