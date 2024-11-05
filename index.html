@@ -3,54 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>コンテンツ検索</title>
+    <title>Google 検索プロキシ</title>
 </head>
 <body>
-    <h1>コンテンツ検索</h1>
+    <h1>Google 検索結果</h1>
 
     <label for="search-query">検索ワード:</label>
     <input type="text" id="search-query" placeholder="検索するワードを入力">
-    <button onclick="searchContent()">検索</button>
+    <button onclick="searchGoogle()">検索</button>
 
     <div id="result"></div>
 
     <script>
-        // CORS制限を回避するためにプロキシAPIを利用して検索結果を取得する関数
-        async function searchContent() {
-            const query = document.getElementById("search-query").value.trim();
+        // Google検索を実行する関数
+        async function searchGoogle() {
+            const query = document.getElementById("search-query").value;
             if (!query) {
                 alert("検索ワードを入力してください");
                 return;
             }
 
-            // プロキシAPIを利用して、Google検索を経由してコンテンツを取得
-            const proxyUrl = "https://api.allorigins.win/raw?url=";
-            const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-            const apiUrl = proxyUrl + encodeURIComponent(targetUrl);
+            // Googleの検索結果ページURL
+            const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+
+            // プロキシサーバー経由でリクエストを送信
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(googleSearchUrl)}`;
 
             try {
-                const response = await fetch(apiUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json', // プロキシAPIのレスポンス形式を指定
-                    },
-                });
+                const response = await fetch(proxyUrl);
+                const data = await response.json();
 
-                if (response.ok) {
-                    const data = await response.text(); // HTMLとして取得
-                    // 検索結果を表示
-                    document.getElementById("result").innerHTML = `
-                        <h2>検索結果:</h2>
-                        <pre>${data}</pre>
-                    `;
+                if (data && data.contents) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(data.contents, 'text/html');
+
+                    // 検索結果を取得（リンク部分を抽出）
+                    const searchResults = [];
+                    const results = doc.querySelectorAll('h3');
+
+                    results.forEach(result => {
+                        const title = result.innerText;
+                        const link = result.parentElement.href;
+
+                        if (link) {
+                            searchResults.push({ title, url: link });
+                        }
+                    });
+
+                    // 結果を表示
+                    const resultDiv = document.getElementById('result');
+                    resultDiv.innerHTML = ''; // 以前の結果をクリア
+
+                    if (searchResults.length === 0) {
+                        resultDiv.innerHTML = '<p>検索結果がありませんでした。</p>';
+                        return;
+                    }
+
+                    // 検索結果をリストとして表示
+                    const resultList = searchResults.map(item => `
+                        <div>
+                            <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
+                        </div>
+                    `).join('');
+
+                    resultDiv.innerHTML = resultList;
+
                 } else {
-                    throw new Error("リクエストに失敗しました");
+                    alert('エラーが発生しました');
                 }
             } catch (error) {
-                console.error("Error:", error);
-                document.getElementById("result").innerHTML = `<p style="color: red;">エラーが発生しました。後ほど再試行してください。</p>`;
+                console.error('Error:', error);
+                alert('検索結果を取得できませんでした');
             }
         }
     </script>
 </body>
 </html>
+
