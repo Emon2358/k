@@ -3,80 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google検索結果</title>
+    <title>プロキシ経由でサイトにアクセス</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        .search-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        input[type="text"], input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+    </style>
 </head>
 <body>
-    <h1>Google検索結果</h1>
+    <h1>プロキシ経由でWebサイトにアクセス</h1>
+    <div class="search-container">
+        <label for="url">アクセスしたいドメインを入力</label>
+        <input type="text" id="url" placeholder="例: https://www.example.com">
+        <input type="submit" value="アクセス" onclick="sendRequestWithProxy()">
+    </div>
 
-    <label for="search-query">検索ワード:</label>
-    <input type="text" id="search-query" placeholder="検索するワードを入力">
-    <button onclick="searchGoogle()">検索</button>
-
-    <div id="result"></div>
+    <div id="responseContainer"></div>
 
     <script>
-        // Google検索を実行する関数
-        async function searchGoogle() {
-            const query = document.getElementById("search-query").value;
-            if (!query) {
-                alert("検索ワードを入力してください");
+        function sendRequestWithProxy() {
+            var url = document.getElementById("url").value;
+
+            if (!url) {
+                alert("URLを入力してください。");
                 return;
             }
 
-            // Googleの検索結果ページURL
-            const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-
-            // プロキシサーバー経由でリクエストを送信
-            const proxyUrl = `https://cors-anywhere.herokuapp.com/${googleSearchUrl}`;
-
-            try {
-                const response = await fetch(proxyUrl, {
-                    headers: {
-                        "X-Requested-With": "XMLHttpRequest", // CORSヘッダ
-                    },
-                });
-
-                const data = await response.text();
-
-                // HTMLを解析
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(data, 'text/html');
-
-                // 検索結果を取得（リンク部分を抽出）
-                const searchResults = [];
-                const results = doc.querySelectorAll('h3');
-
-                results.forEach(result => {
-                    const title = result.innerText;
-                    const link = result.parentElement.href;
-
-                    if (link) {
-                        searchResults.push({ title, url: link });
-                    }
-                });
-
-                // 結果を表示
-                const resultDiv = document.getElementById('result');
-                resultDiv.innerHTML = ''; // 以前の結果をクリア
-
-                if (searchResults.length === 0) {
-                    resultDiv.innerHTML = '<p>検索結果がありませんでした。</p>';
-                    return;
-                }
-
-                // 検索結果をリストとして表示
-                const resultList = searchResults.map(item => `
-                    <div>
-                        <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
-                    </div>
-                `).join('');
-
-                resultDiv.innerHTML = resultList;
-
-            } catch (error) {
-                console.error('Error:', error);
-                alert('検索結果を取得できませんでした');
+            // 入力されたURLがhttp://またはhttps://で始まっていることを確認
+            if (!/^https?:\/\//i.test(url)) {
+                url = 'https://' + url;  // https://をデフォルトで追加
             }
+
+            // CORS Proxyサービスを利用する（例: cors-anywhere）
+            var proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+            var finalUrl = proxyUrl + url;
+
+            fetch(finalUrl)
+                .then(response => response.text())
+                .then(data => {
+                    // レスポンスを表示
+                    document.getElementById("responseContainer").innerHTML = data;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById("responseContainer").innerHTML = "エラーが発生しました。";
+                });
         }
     </script>
 </body>
